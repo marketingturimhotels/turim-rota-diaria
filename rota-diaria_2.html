@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Registo de Rota Diária — TURIM</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getFirestore, doc, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCScta6REFtGYCptujOyevx6Ei0Us5ouYI",
+    authDomain: "turim-rota-diaria.firebaseapp.com",
+    projectId: "turim-rota-diaria",
+    storageBucket: "turim-rota-diaria.firebasestorage.app",
+    messagingSenderId: "431795579147",
+    appId: "1:431795579147:web:aef6650468fe9f2b765a0e",
+    measurementId: "G-B3DHFGQK36"
+  };
+  const fbApp = initializeApp(firebaseConfig);
+  const db = getFirestore(fbApp);
+  window.__firestore = { db, doc, getDoc, setDoc, deleteDoc };
+</script>
+<style>
+  :root {
+    --navy: #142440;
+    --navy-light: #1F3A63;
+    --amber: #E2A63B;
+    --amber-dark: #C68A24;
+    --bg: #F3F4F7;
+    --card: #FFFFFF;
+    --text: #1B1F27;
+    --muted: #6B7280;
+    --border: #E4E6EB;
+    --green: #2F7D5A;
+    --red: #C0392B;
+    --red-bg: #FDECEA;
+    --radius: 14px;
+    --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--sans); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+  #app { max-width: 480px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; padding-bottom: 84px; }
+
+  header.topbar { background: var(--navy); color: #fff; padding: 18px 20px 16px; display: flex; align-items: center; justify-content: space-between; }
+  header.topbar .brand { display: flex; flex-direction: column; }
+  header.topbar .brand .logo { font-size: 13px; letter-spacing: 4px; font-weight: 700; color: var(--amber); }
+  header.topbar .brand .title { font-size: 16px; font-weight: 600; margin-top: 2px; }
+  header.topbar .driver-chip { font-size: 12px; background: rgba(255,255,255,0.1); padding: 6px 10px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.18); cursor: pointer; white-space: nowrap; text-align: right; line-height: 1.3; }
+
+  main { flex: 1; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+
+  .card { background: var(--card); border-radius: var(--radius); padding: 18px; border: 1px solid var(--border); box-shadow: 0 1px 2px rgba(20,36,64,0.04); }
+  .card h2 { margin: 0 0 4px; font-size: 15px; font-weight: 700; }
+  .card .sub { color: var(--muted); font-size: 12.5px; margin: 0 0 14px; }
+
+  label { display: block; font-size: 12.5px; color: var(--muted); margin: 10px 0 5px; font-weight: 600; }
+  input[type=text], input[type=number], input[type=date], input[type=time], select, textarea {
+    width: 100%; padding: 11px 12px; border-radius: 10px; border: 1.5px solid var(--border);
+    font-size: 15px; font-family: var(--sans); background: #fff; color: var(--text);
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--navy-light); }
+  textarea { resize: vertical; min-height: 56px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  button.btn { width: 100%; padding: 13px; border-radius: 10px; border: none; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 16px; }
+  button.btn.primary { background: var(--navy); color: #fff; }
+  button.btn.amber { background: var(--amber); color: var(--navy); }
+  button.btn.danger { background: var(--red-bg); color: var(--red); }
+  button.btn.ghost { background: transparent; color: var(--navy); border: 1.5px solid var(--border); margin-top: 8px; }
+  button.btn.small { width: auto; padding: 8px 14px; font-size: 13px; margin-top: 0; }
+  button.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .link-btn { background: none; border: none; color: var(--navy-light); font-size: 12.5px; font-weight: 600; cursor: pointer; padding: 0; text-decoration: underline; }
+  .link-btn.danger-text { color: var(--red); }
+
+  .km-display { background: var(--navy); color: #fff; border-radius: 10px; padding: 12px 14px; font-family: var(--mono); letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
+  .km-display .num { font-size: 20px; font-weight: 700; color: var(--amber); }
+  .km-display .lbl { font-size: 11px; color: #C9D2E3; text-transform: uppercase; letter-spacing: 1.5px; }
+
+  .vehicle-strip { background: #EEF1F6; border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; }
+  .vehicle-strip .info b { display: block; font-size: 14px; }
+  .vehicle-strip .info span { font-size: 12px; color: var(--muted); }
+
+  .trip-item { border-bottom: 1px solid var(--border); padding: 12px 0; }
+  .trip-item:last-child { border-bottom: none; }
+  .trip-item .top { display: flex; justify-content: space-between; font-size: 13.5px; font-weight: 700; }
+  .trip-item .route { font-size: 13px; color: var(--text); margin-top: 3px; }
+  .trip-item .meta { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .trip-item .actions { margin-top: 6px; display: flex; gap: 14px; }
+  .badge { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .badge.open { background: #FCEBD5; color: var(--amber-dark); }
+  .badge.closed { background: #E4F2EC; color: var(--green); }
+  .badge.edited { background: #E9ECF3; color: var(--navy-light); cursor: pointer; }
+
+  .month-group h3 { font-size: 13px; color: var(--navy); text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 6px; }
+  .month-summary { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+
+  nav.tabbar { position: fixed; bottom: 0; left: 0; right: 0; max-width: 480px; margin: 0 auto; background: #fff; border-top: 1px solid var(--border); display: flex; padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); }
+  nav.tabbar button { flex: 1; background: none; border: none; padding: 8px 2px; font-size: 11px; font-weight: 600; color: var(--muted); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  nav.tabbar button .ico { font-size: 18px; }
+  nav.tabbar button.active { color: var(--navy); }
+  nav.tabbar button.active .ico { color: var(--amber-dark); }
+
+  .empty { text-align: center; color: var(--muted); font-size: 13px; padding: 24px 10px; }
+
+  .driver-select-screen { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; background: var(--navy); }
+  .driver-select-screen .logo { color: var(--amber); font-weight: 700; letter-spacing: 5px; font-size: 14px; margin-bottom: 4px; }
+  .driver-select-screen h1 { color: #fff; font-size: 20px; margin: 0 0 24px; text-align: center; font-weight: 600; }
+  .driver-select-screen .card { width: 100%; max-width: 380px; }
+  .driver-chip-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .driver-chip-list button { background: #F0F1F4; border: 1.5px solid var(--border); border-radius: 20px; padding: 7px 14px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--text); }
+
+  .toast { position: fixed; bottom: 96px; left: 50%; transform: translateX(-50%); background: var(--navy); color: #fff; padding: 10px 18px; border-radius: 30px; font-size: 13px; font-weight: 600; box-shadow: 0 4px 14px rgba(0,0,0,0.2); z-index: 50; opacity: 0; transition: opacity 0.25s; max-width: 90%; text-align: center; }
+  .toast.show { opacity: 1; }
+
+  .fuel-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .fuel-item:last-child { border-bottom: none; }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(10,15,26,0.55); display: flex; align-items: flex-end; justify-content: center; z-index: 100; }
+  .modal-sheet { background: #fff; width: 100%; max-width: 480px; border-radius: 18px 18px 0 0; padding: 22px 20px calc(20px + env(safe-area-inset-bottom)); max-height: 85vh; overflow-y: auto; }
+  .modal-sheet h3 { margin: 0 0 4px; font-size: 16px; }
+  .modal-sheet p { font-size: 13.5px; color: var(--muted); margin: 0 0 12px; }
+  .confirm-box { background: #F0F1F4; border-radius: 10px; padding: 12px 14px; font-size: 13.5px; margin-bottom: 4px; }
+  .confirm-box.warn { background: var(--red-bg); color: var(--red); font-weight: 600; }
+  .confirm-box div { padding: 2px 0; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 16px; }
+  .modal-actions .btn { margin-top: 0; }
+  .edit-history-entry { border-bottom: 1px solid var(--border); padding: 8px 0; font-size: 12.5px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div id="app"><div class="empty">A carregar...</div></div>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+const state = {
+  employee: null,        // {numero, nome}
+  employeesList: [],
+  tab: 'viagem',
+  checkin: null,          // {matricula, modelo, kmAtual, horaCheckin, data}
+  trips: [],
+  fuel: [],
+  modal: null,
+  reminderChecked: false,
+  pendingCheckin: null,   // form values held while confirming
+  editingTripId: null,
+  authStep: 'numero',    // 'numero' | 'createPin' | 'enterPin'
+  authNumero: '',
+  authRecord: null,      // {numero, nome, pin} loaded for enterPin step
+  authError: '',
+  lastNumero: '',
+  pinRevealed: false,
+};
+
+function slug(s) { return (s||'').toString().trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-'); }
+function todayISO() { return new Date().toISOString().slice(0,10); }
+function nowHM() { const d = new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function nowISOMinute() { const d = new Date(); return d.toISOString(); }
+function fmtMonth(dateStr) {
+  const [y,m] = dateStr.split('-');
+  const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  return meses[parseInt(m,10)-1] + ' ' + y;
+}
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2400);
+}
+function escapeHtml(s) { return (s==null?'':String(s)).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+async function storeGet(key) {
+  try {
+    const { db, doc, getDoc } = window.__firestore;
+    const snap = await getDoc(doc(db, 'kv', key));
+    return snap.exists() ? snap.data().value : null;
+  } catch (e) { console.error('firestore get fail', key, e); return null; }
+}
+async function storeSet(key, value) {
+  try {
+    const { db, doc, setDoc } = window.__firestore;
+    await setDoc(doc(db, 'kv', key), { value });
+  } catch (e) { console.error('firestore set fail', key, e); }
+}
+async function storeDelete(key) {
+  try {
+    const { db, doc, deleteDoc } = window.__firestore;
+    await deleteDoc(doc(db, 'kv', key));
+  } catch (e) { /* ok if missing */ }
+}
+
+// ---------- Data loading ----------
+async function loadEmployeesList() {
+  const raw = await storeGet('employees-list', true);
+  state.employeesList = raw ? JSON.parse(raw) : [];
+}
+async function saveEmployeesList() { await storeSet('employees-list', JSON.stringify(state.employeesList), true); }
+
+async function loadLastNumero() { state.lastNumero = localStorage.getItem('last-numero') || ''; }
+async function saveLastNumero(numero) { localStorage.setItem('last-numero', numero); }
+
+async function loadSession() {
+  const raw = localStorage.getItem('active-session');
+  return raw ? JSON.parse(raw) : null;
+}
+async function saveSession() { localStorage.setItem('active-session', JSON.stringify(state.employee)); }
+async function clearSession() { localStorage.removeItem('active-session'); }
+
+async function getPinRecord(numero) {
+  const raw = await storeGet('pin-'+slug(numero), true);
+  return raw ? JSON.parse(raw) : null;
+}
+async function savePinRecord(numero, nome, pin) {
+  await storeSet('pin-'+slug(numero), JSON.stringify({ numero, nome, pin }), true);
+}
+
+async function loadCheckin() {
+  const raw = await storeGet('checkin-'+slug(state.employee.numero), true);
+  state.checkin = raw ? JSON.parse(raw) : null;
+}
+async function saveCheckin() { await storeSet('checkin-'+slug(state.employee.numero), JSON.stringify(state.checkin), true); }
+async function clearCheckin() { await storeDelete('checkin-'+slug(state.employee.numero), true); state.checkin = null; }
+
+async function getVehicleRecord(matricula) {
+  const raw = await storeGet('vehicle-'+slug(matricula), true);
+  return raw ? JSON.parse(raw) : null;
+}
+async function saveVehicleRecord(matricula, modelo, kmAtual) {
+  await storeSet('vehicle-'+slug(matricula), JSON.stringify({ matricula, modelo, kmAtual }), true);
+}
+
+async function loadTrips() {
+  const raw = await storeGet('trips-'+slug(state.employee.numero), true);
+  state.trips = raw ? JSON.parse(raw) : [];
+}
+async function saveTrips() { await storeSet('trips-'+slug(state.employee.numero), JSON.stringify(state.trips), true); }
+
+async function loadFuel() {
+  const raw = await storeGet('fuel-'+slug(state.employee.numero), true);
+  state.fuel = raw ? JSON.parse(raw) : [];
+}
+async function saveFuel() { await storeSet('fuel-'+slug(state.employee.numero), JSON.stringify(state.fuel), true); }
+
+function openTrip() { return state.trips.find(t => t.status === 'aberta'); }
+
+// ---------- Employee / auth flow ----------
+async function completeLogin(numero, nome) {
+  state.employee = { numero, nome };
+  if (!state.employeesList.find(e => e.numero === numero)) {
+    state.employeesList.push({ numero, nome });
+    await saveEmployeesList();
+  }
+  await saveLastNumero(numero);
+  await saveSession();
+  await Promise.all([loadCheckin(), loadTrips(), loadFuel()]);
+  state.tab = 'viagem';
+  state.reminderChecked = false;
+  render();
+  checkOpenTripReminder();
+}
+
+async function proceedFromNumero(numero) {
+  numero = numero.trim();
+  if (!numero) { showToast('Escreve o teu nº de funcionário'); return; }
+  state.authNumero = numero;
+  state.authError = '';
+  state.pinRevealed = false;
+  const record = await getPinRecord(numero);
+  if (record) {
+    state.authRecord = record;
+    state.authStep = 'enterPin';
+  } else {
+    state.authRecord = null;
+    state.authStep = 'createPin';
+  }
+  render();
+}
+
+async function changeEmployee() {
+  await clearSession();
+  state.employee = null; state.checkin = null; state.trips = []; state.fuel = [];
+  state.authStep = 'numero'; state.authNumero = ''; state.authRecord = null; state.authError = '';
+  render();
+}
+
+function checkOpenTripReminder() {
+  if (state.reminderChecked) return;
+  state.reminderChecked = true;
+  const ot = openTrip();
+  if (!ot) return;
+  const started = new Date(ot.data + 'T' + ot.horaSaida + ':00');
+  const diffH = (Date.now() - started.getTime()) / 3600000;
+  if (diffH > 2) {
+    state.modal = { type: 'openTripReminder', hours: diffH.toFixed(1) };
+    render();
+  }
+}
+
+async function init() {
+  const diag = await diagnoseStorage();
+  if (!diag.ok) {
+    document.getElementById('app').innerHTML = renderStorageWarning(diag.reason);
+    document.getElementById('btnRetryDiag').onclick = init;
+    return;
+  }
+  await loadEmployeesList();
+  await loadLastNumero();
+  const session = await loadSession();
+  if (session && session.numero && session.nome) {
+    state.employee = session;
+    await Promise.all([loadCheckin(), loadTrips(), loadFuel()]);
+    state.tab = 'viagem';
+    render();
+    checkOpenTripReminder();
+    return;
+  }
+  render();
+}
+
+async function diagnoseStorage() {
+  if (!window.__firestore) {
+    return { ok: false, reason: 'O Firebase ainda não carregou. Verifica a tua ligação à internet e tenta outra vez.' };
+  }
+  try {
+    const testVal = 'diag-' + Date.now();
+    await storeSet('diagnostic-test', testVal);
+    const v = await storeGet('diagnostic-test');
+    if (v !== testVal) {
+      return { ok: false, reason: 'O Firebase respondeu, mas não devolveu o valor esperado. Pode ser uma falha temporária de rede.' };
+    }
+    await storeDelete('diagnostic-test');
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, reason: 'Falhou ao tentar gravar um valor de teste: ' + (e && e.message ? e.message : 'erro desconhecido') + '. Verifica a ligação à internet.' };
+  }
+}
+
+function renderStorageWarning(reason) {
+  return `
+    <div class="driver-select-screen">
+      <div class="logo">TURIM HOTELS</div>
+      <h1>Registo de Rota Diária</h1>
+      <div class="card">
+        <h2 style="color:var(--red);">Gravação de dados indisponível</h2>
+        <p class="sub">${escapeHtml(reason)}</p>
+        <p class="sub">Se abriste isto através de um ficheiro descarregado, WhatsApp ou email, tenta abrir através do link original na conversa do Claude. Se o problema persistir mesmo assim, os dados não vão ficar guardados nesta sessão.</p>
+        <button class="btn amber" id="btnRetryDiag">Tentar outra vez</button>
+      </div>
+    </div>`;
+}
+
+// ---------- Render root ----------
+function render() {
+  const app = document.getElementById('app');
+  if (!state.employee) {
+    if (state.authStep === 'createPin') { app.innerHTML = renderCreatePin(); attachCreatePinEvents(); return; }
+    if (state.authStep === 'enterPin') { app.innerHTML = renderEnterPin(); attachEnterPinEvents(); return; }
+    app.innerHTML = renderEmployeeSelect(); attachEmployeeSelectEvents(); return;
+  }
+  app.innerHTML = renderMain();
+  attachMainEvents();
+  renderModal();
+}
+
+function renderEmployeeSelect() {
+  return `
+    <div class="driver-select-screen">
+      <div class="logo">TURIM HOTELS</div>
+      <h1>Registo de Rota Diária</h1>
+      <div class="card">
+        <h2>Identificação</h2>
+        <p class="sub">Introduz o teu nº de funcionário.</p>
+        <label>Nº de funcionário</label>
+        <input type="text" id="empNumero" placeholder="ex: 1042" inputmode="numeric" pattern="[0-9]*" value="${escapeHtml(state.lastNumero)}">
+        <button class="btn amber" id="btnEnter">Continuar</button>
+        ${state.employeesList.length ? `
+          <label style="margin-top:18px;">Funcionários recentes</label>
+          <div class="driver-chip-list">
+            ${state.employeesList.map(e => `<button data-numero="${escapeHtml(e.numero)}">${escapeHtml(e.nome)} · nº${escapeHtml(e.numero)}</button>`).join('')}
+          </div>` : ''}
+      </div>
+    </div>`;
+}
+function attachEmployeeSelectEvents() {
+  document.getElementById('btnEnter').onclick = () => proceedFromNumero(document.getElementById('empNumero').value);
+  document.querySelectorAll('.driver-chip-list button').forEach(b => {
+    b.onclick = () => proceedFromNumero(b.dataset.numero);
+  });
+  const inp = document.getElementById('empNumero');
+  if (inp) inp.onkeydown = (e) => { if (e.key === 'Enter') document.getElementById('btnEnter').click(); };
+}
+
+function renderCreatePin() {
+  return `
+    <div class="driver-select-screen">
+      <div class="logo">TURIM HOTELS</div>
+      <h1>Registo de Rota Diária</h1>
+      <div class="card">
+        <h2>Criar PIN</h2>
+        <p class="sub">É a primeira vez que entras com o nº ${escapeHtml(state.authNumero)}. Escreve o teu nome e cria um PIN de 4 dígitos.</p>
+        <label>Nome</label>
+        <input type="text" id="cpNome" placeholder="O teu nome">
+        <label>Criar PIN (4 dígitos)</label>
+        <input type="password" id="cpPin1" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••">
+        <label>Confirmar PIN</label>
+        <input type="password" id="cpPin2" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••">
+        ${state.authError ? `<div class="confirm-box warn" style="margin-top:8px;">${escapeHtml(state.authError)}</div>` : ''}
+        <button class="btn amber" id="btnCreatePin">Criar PIN e entrar</button>
+        <button class="link-btn" id="btnBackNumero" style="margin-top:14px;">Voltar</button>
+      </div>
+    </div>`;
+}
+function attachCreatePinEvents() {
+  const pin1 = document.getElementById('cpPin1');
+  const pin2 = document.getElementById('cpPin2');
+  pin1.oninput = () => { if (pin1.value.length >= 4) pin2.focus(); };
+  pin2.oninput = () => { if (pin2.value.length >= 4) document.getElementById('btnCreatePin').click(); };
+  document.getElementById('btnCreatePin').onclick = async () => {
+    const nome = document.getElementById('cpNome').value.trim();
+    const p1 = pin1.value.trim();
+    const p2 = pin2.value.trim();
+    if (!nome) { state.authError = 'Escreve o teu nome.'; render(); return; }
+    if (!/^\d{4}$/.test(p1)) { state.authError = 'O PIN deve ter 4 dígitos.'; render(); return; }
+    if (p1 !== p2) { state.authError = 'Os dois PINs não coincidem.'; render(); return; }
+    await savePinRecord(state.authNumero, nome, p1);
+    state.authError = '';
+    state.authStep = 'numero';
+    await completeLogin(state.authNumero, nome);
+  };
+  document.getElementById('btnBackNumero').onclick = () => { state.authStep = 'numero'; state.authError = ''; render(); };
+}
+
+function renderEnterPin() {
+  return `
+    <div class="driver-select-screen">
+      <div class="logo">TURIM HOTELS</div>
+      <h1>Registo de Rota Diária</h1>
+      <div class="card">
+        <h2>Olá, ${escapeHtml(state.authRecord.nome)}</h2>
+        <p class="sub">Introduz o teu PIN para entrar.</p>
+        <label>PIN</label>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <input type="${state.pinRevealed?'text':'password'}" id="epPin" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" style="flex:1;">
+          <button class="link-btn" id="btnRevealPin" style="white-space:nowrap;">${state.pinRevealed?'ocultar':'mostrar'} 👁</button>
+        </div>
+        ${state.authError ? `<div class="confirm-box warn" style="margin-top:8px;">${escapeHtml(state.authError)}</div>` : ''}
+        <button class="btn amber" id="btnEnterPin">Entrar</button>
+        <button class="link-btn" id="btnBackNumero" style="margin-top:14px;">Não sou eu / trocar número</button>
+      </div>
+    </div>`;
+}
+function attachEnterPinEvents() {
+  const pinInp = document.getElementById('epPin');
+  pinInp.focus();
+  pinInp.oninput = () => { if (pinInp.value.length >= 4) document.getElementById('btnEnterPin').click(); };
+  document.getElementById('btnRevealPin').onclick = () => { state.pinRevealed = !state.pinRevealed; render(); };
+  document.getElementById('btnEnterPin').onclick = async () => {
+    const val = pinInp.value.trim();
+    if (val === state.authRecord.pin) {
+      state.authError = '';
+      await completeLogin(state.authRecord.numero, state.authRecord.nome);
+    } else {
+      state.authError = 'PIN incorreto. Tenta outra vez.';
+      render();
+    }
+  };
+  document.getElementById('btnBackNumero').onclick = () => { state.authStep = 'numero'; state.authError = ''; state.authRecord = null; render(); };
+}
+
+function renderMain() {
+  return `
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">TURIM</div>
+        <div class="title">Rota Diária</div>
+      </div>
+      <div class="driver-chip" id="chipDriver">${escapeHtml(state.employee.nome)}<br>nº ${escapeHtml(state.employee.numero)} · trocar</div>
+    </header>
+    <main>${renderTab()}</main>
+    <nav class="tabbar">
+      <button data-tab="viagem" class="${state.tab==='viagem'?'active':''}"><span class="ico">🚗</span>Viagem</button>
+      <button data-tab="historico" class="${state.tab==='historico'?'active':''}"><span class="ico">📋</span>Histórico</button>
+      <button data-tab="abastecimento" class="${state.tab==='abastecimento'?'active':''}"><span class="ico">⛽</span>Combustível</button>
+      <button data-tab="resumo" class="${state.tab==='resumo'?'active':''}"><span class="ico">📊</span>Resumo</button>
+    </nav>`;
+}
+
+function renderTab() {
+  if (state.tab === 'viagem') return renderViagemTab();
+  if (state.tab === 'historico') return renderHistoricoTab();
+  if (state.tab === 'abastecimento') return renderAbastecimentoTab();
+  if (state.tab === 'resumo') return renderResumoTab();
+  return '';
+}
+
+// ---------- Viagem tab ----------
+function renderViagemTab() {
+  if (!state.checkin) return renderCheckinForm();
+
+  const ot = openTrip();
+  let html = `
+    <div class="card">
+      <div class="vehicle-strip">
+        <div class="info">
+          <b>${escapeHtml(state.checkin.matricula)}</b>
+          <span>${escapeHtml(state.checkin.modelo||'')} · em serviço desde ${state.checkin.horaCheckin}</span>
+        </div>
+        <button class="btn ghost small" id="btnCheckout">Check-out</button>
+      </div>
+    </div>`;
+
+  if (ot) {
+    html += `
+      <div class="card">
+        <h2>Viagem em curso</h2>
+        <p class="sub">Iniciada às ${ot.horaSaida} · ${escapeHtml(ot.origem)} → ${escapeHtml(ot.destino)}</p>
+        <div class="km-display"><span class="lbl">Km saída</span><span class="num">${ot.kmSaida}</span></div>
+        <label>Hora de chegada</label>
+        <input type="time" id="horaChegada" value="${nowHM()}">
+        <label>Km de chegada</label>
+        <input type="number" id="kmChegada" min="${ot.kmSaida}" placeholder="ex: ${ot.kmSaida + 10}">
+        <label>Notas / ocorrências (opcional)</label>
+        <textarea id="notasChegada" placeholder="Portagens, avarias, atrasos..."></textarea>
+        <button class="btn primary" id="btnTerminar">Terminar viagem</button>
+        <button class="link-btn danger-text" id="btnCancelarViagem" style="margin-top:14px;">Cancelar esta viagem</button>
+      </div>`;
+  } else {
+    html += `
+      <div class="card">
+        <h2>Nova viagem</h2>
+        <p class="sub">Viatura ${escapeHtml(state.checkin.matricula)} · km atual ${state.checkin.kmAtual}</p>
+        <div class="km-display"><span class="lbl">Km de saída</span><span class="num">${state.checkin.kmAtual}</span></div>
+        <label>Hora de saída</label>
+        <input type="time" id="horaSaida" value="${nowHM()}">
+        <div class="row2">
+          <div><label>Origem</label><input type="text" id="origem" placeholder="ex: Hotel"></div>
+          <div><label>Destino</label><input type="text" id="destino" placeholder="ex: Aeroporto"></div>
+        </div>
+        <label>Finalidade / serviço</label>
+        <input type="text" id="finalidade" placeholder="ex: Transfer hóspede">
+        <button class="btn amber" id="btnIniciar">Registar saída</button>
+      </div>`;
+  }
+  return html;
+}
+
+function renderCheckinForm() {
+  return `
+    <div class="card">
+      <h2>Check-in de viatura</h2>
+      <p class="sub">Regista a viatura que vais usar neste turno. Só precisas de fazer isto uma vez por turno.</p>
+      <label>Matrícula</label>
+      <input type="text" id="ciMatricula" placeholder="ex: 00-AA-00">
+      <label>Marca / Modelo</label>
+      <input type="text" id="ciModelo" placeholder="ex: Renault Clio">
+      <label>Km atuais da viatura</label>
+      <input type="number" id="ciKm" placeholder="ex: 45230">
+      <button class="btn amber" id="btnCheckin">Iniciar turno</button>
+    </div>`;
+}
+
+// ---------- Historico tab ----------
+function renderHistoricoTab() {
+  if (!state.trips.length) return `<div class="card"><div class="empty">Ainda não tens viagens registadas.</div></div>`;
+  const sorted = [...state.trips].sort((a,b) => (b.data+b.horaSaida).localeCompare(a.data+a.horaSaida));
+  const groups = {};
+  sorted.forEach(t => { const m = t.data.slice(0,7); (groups[m] = groups[m]||[]).push(t); });
+  return Object.keys(groups).sort().reverse().map(m => {
+    const items = groups[m];
+    const totalKm = items.filter(t=>t.totalKm!=null).reduce((s,t)=>s+t.totalKm,0);
+    return `
+    <div class="card month-group">
+      <h3>${fmtMonth(m+'-01')}</h3>
+      <div class="month-summary">${items.length} viagem(ns) · ${totalKm} km total</div>
+      ${items.map(t => `
+        <div class="trip-item">
+          <div class="top">
+            <span>${t.data} · ${escapeHtml(t.matricula)}</span>
+            <span class="badge ${t.status==='aberta'?'open':'closed'}">${t.status==='aberta'?'Em curso':'Concluída'}</span>
+          </div>
+          <div class="route">${escapeHtml(t.origem)} → ${escapeHtml(t.destino)} ${t.finalidade?('· '+escapeHtml(t.finalidade)):''}</div>
+          <div class="meta">${t.horaSaida} (${t.kmSaida} km) ${t.horaChegada?(' → '+t.horaChegada+' ('+t.kmChegada+' km) · '+t.totalKm+' km percorridos'):''}</div>
+          ${t.notas ? `<div class="meta">Nota: ${escapeHtml(t.notas)}</div>` : ''}
+          ${t.status==='fechada' ? `
+            <div class="actions">
+              <button class="link-btn" data-edit="${t.id}">Editar</button>
+              ${t.editHistory && t.editHistory.length ? `<button class="link-btn" data-history="${t.id}">Editado ${t.editHistory.length}x</button>` : ''}
+            </div>` : ''}
+        </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+// ---------- Abastecimento tab ----------
+function renderAbastecimentoTab() {
+  if (!state.checkin) {
+    return `<div class="card"><div class="empty">Faz check-in de uma viatura primeiro, no separador Viagem.</div></div>`;
+  }
+  return `
+    <div class="card">
+      <h2>Novo abastecimento</h2>
+      <p class="sub">Viatura: ${escapeHtml(state.checkin.matricula)}</p>
+      <label>Data</label>
+      <input type="date" id="fuelData" value="${todayISO()}">
+      <div class="row2">
+        <div><label>Litros</label><input type="number" id="fuelLitros" step="0.01"></div>
+        <div><label>Custo (€)</label><input type="number" id="fuelCusto" step="0.01"></div>
+      </div>
+      <label>Local / posto</label>
+      <input type="text" id="fuelLocal" placeholder="ex: Galp A1">
+      <button class="btn amber" id="btnFuel">Registar abastecimento</button>
+    </div>
+    <div class="card">
+      <h2>Histórico de abastecimentos</h2>
+      ${state.fuel.length ? [...state.fuel].sort((a,b)=>b.data.localeCompare(a.data)).map(f => `
+        <div class="fuel-item">
+          <span>${f.data} · ${escapeHtml(f.matricula)} · ${escapeHtml(f.local||'')}</span>
+          <span>${f.litros}L · €${f.custo}</span>
+        </div>`).join('') : `<div class="empty">Sem registos ainda.</div>`}
+    </div>`;
+}
+
+// ---------- Resumo tab ----------
+function renderResumoTab() {
+  const groups = {};
+  state.trips.forEach(t => { const m = t.data.slice(0,7); (groups[m]=groups[m]||[]).push(t); });
+  const fuelGroups = {};
+  state.fuel.forEach(f => { const m = f.data.slice(0,7); (fuelGroups[m]=fuelGroups[m]||[]).push(f); });
+  const months = Array.from(new Set([...Object.keys(groups), ...Object.keys(fuelGroups)])).sort().reverse();
+  if (!months.length) return `<div class="card"><div class="empty">Sem dados para resumir ainda.</div></div>`;
+  return `<div class="card"><h2>Resumo mensal — ${escapeHtml(state.employee.nome)}</h2>` +
+    months.map(m => {
+      const trips = groups[m] || [];
+      const fuels = fuelGroups[m] || [];
+      const totalKm = trips.filter(t=>t.totalKm!=null).reduce((s,t)=>s+t.totalKm,0);
+      const totalLitros = fuels.reduce((s,f)=>s+parseFloat(f.litros||0),0);
+      const totalCusto = fuels.reduce((s,f)=>s+parseFloat(f.custo||0),0);
+      return `
+        <div class="month-group" style="margin-top:14px;">
+          <h3>${fmtMonth(m+'-01')}</h3>
+          <div class="month-summary">
+            ${trips.length} viagens · ${totalKm} km percorridos<br>
+            ${totalLitros.toFixed(1)} litros · €${totalCusto.toFixed(2)} em combustível
+          </div>
+        </div>`;
+    }).join('') + `</div>`;
+}
+
+// ---------- Modal ----------
+function renderModal() {
+  const existing = document.getElementById('modalRoot');
+  if (existing) existing.remove();
+  if (!state.modal) return;
+  const div = document.createElement('div');
+  div.id = 'modalRoot';
+  div.innerHTML = buildModalHtml(state.modal);
+  document.body.appendChild(div);
+  attachModalEvents();
+}
+
+function buildModalHtml(modal) {
+  if (modal.type === 'checkinConfirm') {
+    const d = modal.data;
+    return `
+      <div class="modal-overlay">
+        <div class="modal-sheet">
+          <h3>Confirma os dados da viatura</h3>
+          <p>Vais iniciar o turno com estes dados.</p>
+          <div class="confirm-box">
+            <div><b>Matrícula:</b> ${escapeHtml(d.matricula)}</div>
+            <div><b>Modelo:</b> ${escapeHtml(d.modelo||'—')}</div>
+            <div><b>Km atuais:</b> ${d.kmAtual}</div>
+          </div>
+          ${d.warning ? `<div class="confirm-box warn" style="margin-top:8px;">${escapeHtml(d.warning)}</div>` : ''}
+          <div class="modal-actions">
+            <button class="btn ghost" id="modalCancel">Corrigir</button>
+            <button class="btn amber" id="modalConfirm">Confirmar</button>
+          </div>
+        </div>
+      </div>`;
+  }
+  if (modal.type === 'kmWarning') {
+    return `
+      <div class="modal-overlay">
+        <div class="modal-sheet">
+          <h3>Distância invulgar</h3>
+          <div class="confirm-box warn">Esta viagem teria ${modal.km} km. Confirmas que está correto?</div>
+          <div class="modal-actions">
+            <button class="btn ghost" id="modalCancel">Corrigir</button>
+            <button class="btn amber" id="modalConfirm">Confirmar mesmo assim</button>
+          </div>
+        </div>
+      </div>`;
+  }
+  if (modal.type === 'openTripReminder') {
+    return `
+      <div class="modal-overlay">
+        <div class="modal-sheet">
+          <h3>Viagem em curso há ${modal.hours}h</h3>
+          <p>Tens uma viagem por terminar. Não te esqueças de a fechar assim que chegares ao destino.</p>
+          <div class="modal-actions">
+            <button class="btn amber" id="modalConfirm" style="width:100%;">Entendido</button>
+          </div>
+        </div>
+      </div>`;
+  }
+  if (modal.type === 'cancelTrip') {
+    return `
+      <div class="modal-overlay">
+        <div class="modal-sheet">
+          <h3>Cancelar viagem?</h3>
+          <p>Esta ação remove o registo da viagem em curso. Não é possível desfazer.</p>
+          <div class="modal-actions">
+            <button class="btn ghost" id="modalCancel">Voltar</button>
+            <button class="btn danger" id="modalConfirm">Cancelar viagem</button>
+          </div>
+        </div>
+      </div>`;
+  }
+  if (modal.type === 'editHistory') {
+    return `
+      <div class="modal-overlay">
+        <div class="modal-sheet">
+          <h3>Histórico de edições</h3>
+          ${modal.entries.map(e => `
+            <div class="edit-history-entry">
+              <div><b>${new Date(e.timestamp).toLocaleString('pt-PT')}</b></div>
+              <div>${escapeHtml(e.summary)}</div>
+            </div>`).join('')}
+          <div class="modal-actions"><button class="btn ghost" id="modalCancel" style="width:100%;">Fechar</button></div>
+        </div>
+      </div>`;
+  }
+  if (modal.type === 'editTrip') {
+    const t = modal.trip;
+    return `
+      <div class="modal-overlay">
+        <div class="modal-sheet">
+          <h3>Editar viagem</h3>
+          <label>Data</label><input type="date" id="editData" value="${t.data}">
+          <div class="row2">
+            <div><label>Hora saída</label><input type="time" id="editHoraSaida" value="${t.horaSaida}"></div>
+            <div><label>Km saída</label><input type="number" id="editKmSaida" value="${t.kmSaida}"></div>
+          </div>
+          <div class="row2">
+            <div><label>Hora chegada</label><input type="time" id="editHoraChegada" value="${t.horaChegada||''}"></div>
+            <div><label>Km chegada</label><input type="number" id="editKmChegada" value="${t.kmChegada!=null?t.kmChegada:''}"></div>
+          </div>
+          <div class="row2">
+            <div><label>Origem</label><input type="text" id="editOrigem" value="${escapeHtml(t.origem)}"></div>
+            <div><label>Destino</label><input type="text" id="editDestino" value="${escapeHtml(t.destino)}"></div>
+          </div>
+          <label>Finalidade</label><input type="text" id="editFinalidade" value="${escapeHtml(t.finalidade||'')}">
+          <label>Notas</label><textarea id="editNotas">${escapeHtml(t.notas||'')}</textarea>
+          <div class="modal-actions">
+            <button class="btn ghost" id="modalCancel">Cancelar</button>
+            <button class="btn amber" id="modalConfirm">Guardar alterações</button>
+          </div>
+        </div>
+      </div>`;
+  }
+  if (modal.type === 'checkoutSummary') {
+    const s = modal.summary;
+    return `
+      <div class="modal-overlay">
+        <div class="modal-sheet">
+          <h3>Resumo do turno — ${modal.data}</h3>
+          <p>Confirma que está tudo correto antes de descarregar o relatório.</p>
+          <div class="confirm-box">
+            <div><b>Viatura:</b> ${escapeHtml(s.matricula)}</div>
+            <div><b>Nº de viagens:</b> ${s.numViagens}</div>
+            <div><b>Km total percorrido:</b> ${s.totalKm}</div>
+            <div><b>Abastecimentos:</b> ${s.numAbastecimentos}</div>
+            <div><b>Litros:</b> ${s.totalLitros}</div>
+            <div><b>Custo combustível:</b> €${s.totalCusto}</div>
+          </div>
+          <div class="modal-actions">
+            <button class="btn ghost" id="modalCancel">Voltar</button>
+            <button class="btn amber" id="modalConfirm">Descarregar e terminar turno</button>
+          </div>
+        </div>
+      </div>`;
+  }
+  if (modal.type === 'checkoutBlocked') {
+    return `
+      <div class="modal-overlay">
+        <div class="modal-sheet">
+          <h3>Termina a viagem em curso</h3>
+          <p>Antes de fazer check-out precisas de terminar a viagem que está em curso.</p>
+          <div class="modal-actions"><button class="btn amber" id="modalConfirm" style="width:100%;">Entendido</button></div>
+        </div>
+      </div>`;
+  }
+  return '';
+}
+
+function attachModalEvents() {
+  const cancelBtn = document.getElementById('modalCancel');
+  const confirmBtn = document.getElementById('modalConfirm');
+  if (cancelBtn) cancelBtn.onclick = () => { state.modal = null; renderModal(); };
+  if (confirmBtn) confirmBtn.onclick = () => handleModalConfirm();
+}
+
+async function handleModalConfirm() {
+  const modal = state.modal;
+  if (modal.type === 'checkinConfirm') {
+    const d = modal.data;
+    state.checkin = { matricula: d.matricula, modelo: d.modelo, kmAtual: d.kmAtual, horaCheckin: nowHM(), data: todayISO() };
+    await saveCheckin();
+    await saveVehicleRecord(d.matricula, d.modelo, d.kmAtual);
+    state.modal = null;
+    showToast('Turno iniciado');
+    render();
+    return;
+  }
+  if (modal.type === 'kmWarning') {
+    await finalizeTripClose(modal.tripId, modal.horaChegada, modal.kmChegada, modal.notas, true);
+    state.modal = null;
+    render();
+    return;
+  }
+  if (modal.type === 'openTripReminder' || modal.type === 'checkoutBlocked') {
+    state.modal = null; renderModal();
+    return;
+  }
+  if (modal.type === 'checkoutSummary') {
+    exportDayExcel(modal.data, modal.trips, modal.fuel);
+    await clearCheckin();
+    await clearSession();
+    state.modal = null;
+    state.employee = null; state.trips = []; state.fuel = [];
+    state.authStep = 'numero'; state.authNumero = ''; state.authRecord = null;
+    showToast('Turno terminado. Relatório descarregado.');
+    render();
+    renderModal();
+    return;
+  }
+  if (modal.type === 'cancelTrip') {
+    state.trips = state.trips.filter(t => t.id !== modal.tripId);
+    await saveTrips();
+    state.modal = null;
+    showToast('Viagem cancelada');
+    render();
+    return;
+  }
+  if (modal.type === 'editTrip') {
+    const t = state.trips.find(x => x.id === modal.trip.id);
+    const snapshot = { data: t.data, horaSaida: t.horaSaida, kmSaida: t.kmSaida, horaChegada: t.horaChegada, kmChegada: t.kmChegada, totalKm: t.totalKm, origem: t.origem, destino: t.destino, finalidade: t.finalidade, notas: t.notas };
+    const newData = document.getElementById('editData').value;
+    const newHoraSaida = document.getElementById('editHoraSaida').value;
+    const newKmSaida = parseFloat(document.getElementById('editKmSaida').value);
+    const newHoraChegada = document.getElementById('editHoraChegada').value;
+    const newKmChegada = parseFloat(document.getElementById('editKmChegada').value);
+    const newOrigem = document.getElementById('editOrigem').value.trim();
+    const newDestino = document.getElementById('editDestino').value.trim();
+    const newFinalidade = document.getElementById('editFinalidade').value.trim();
+    const newNotas = document.getElementById('editNotas').value.trim();
+    if (!newData || !newHoraSaida || isNaN(newKmSaida) || !newOrigem || !newDestino) { showToast('Preenche os campos obrigatórios'); return; }
+    t.editHistory = t.editHistory || [];
+    t.editHistory.push({ timestamp: nowISOMinute(), summary: `${snapshot.data} ${snapshot.horaSaida}→${snapshot.horaChegada||'?'} · ${snapshot.kmSaida}→${snapshot.kmChegada!=null?snapshot.kmChegada:'?'} km · ${snapshot.origem} → ${snapshot.destino}` });
+    t.data = newData; t.horaSaida = newHoraSaida; t.kmSaida = newKmSaida;
+    t.horaChegada = newHoraChegada || null;
+    t.kmChegada = isNaN(newKmChegada) ? null : newKmChegada;
+    t.totalKm = (t.kmChegada!=null) ? Math.round((t.kmChegada - t.kmSaida)*10)/10 : null;
+    t.origem = newOrigem; t.destino = newDestino; t.finalidade = newFinalidade; t.notas = newNotas;
+    await saveTrips();
+    state.modal = null;
+    showToast('Viagem atualizada');
+    render();
+    return;
+  }
+}
+
+// ---------- Main events ----------
+function attachMainEvents() {
+  document.getElementById('chipDriver').onclick = changeEmployee;
+  document.querySelectorAll('nav.tabbar button').forEach(b => { b.onclick = () => { state.tab = b.dataset.tab; render(); }; });
+
+  if (state.tab === 'viagem') attachViagemEvents();
+  if (state.tab === 'abastecimento') attachFuelEvents();
+  if (state.tab === 'historico') attachHistoricoEvents();
+}
+
+function attachHistoricoEvents() {
+  document.querySelectorAll('[data-edit]').forEach(b => {
+    b.onclick = () => {
+      const t = state.trips.find(x => x.id === b.dataset.edit);
+      state.modal = { type: 'editTrip', trip: t };
+      renderModal();
+    };
+  });
+  document.querySelectorAll('[data-history]').forEach(b => {
+    b.onclick = () => {
+      const t = state.trips.find(x => x.id === b.dataset.history);
+      state.modal = { type: 'editHistory', entries: t.editHistory };
+      renderModal();
+    };
+  });
+}
+
+function attachViagemEvents() {
+  if (!state.checkin) {
+    document.getElementById('btnCheckin').onclick = async () => {
+      const matricula = document.getElementById('ciMatricula').value.trim();
+      const modelo = document.getElementById('ciModelo').value.trim();
+      const kmAtual = parseFloat(document.getElementById('ciKm').value);
+      if (!matricula || isNaN(kmAtual)) { showToast('Preenche matrícula e km'); return; }
+      const existing = await getVehicleRecord(matricula);
+      let warning = '';
+      if (existing) {
+        if (kmAtual < existing.kmAtual) warning = `A viatura tinha ${existing.kmAtual} km registados. Escreveste ${kmAtual} (menos ${(existing.kmAtual-kmAtual)} km). Confirmas na mesma?`;
+        else if ((kmAtual - existing.kmAtual) > 500) warning = `A viatura tinha ${existing.kmAtual} km registados. Escreveste ${kmAtual} (mais ${(kmAtual-existing.kmAtual)} km num salto). Confirmas na mesma?`;
+      }
+      state.modal = { type: 'checkinConfirm', data: { matricula, modelo: modelo || (existing?existing.modelo:''), kmAtual, warning } };
+      renderModal();
+    };
+    return;
+  }
+
+  const btnCheckout = document.getElementById('btnCheckout');
+  if (btnCheckout) btnCheckout.onclick = doCheckout;
+
+  const ot = openTrip();
+  if (ot) {
+    document.getElementById('btnTerminar').onclick = async () => {
+      const horaChegada = document.getElementById('horaChegada').value;
+      const kmChegada = parseFloat(document.getElementById('kmChegada').value);
+      const notas = document.getElementById('notasChegada').value.trim();
+      if (!horaChegada || isNaN(kmChegada)) { showToast('Preenche hora e km de chegada'); return; }
+      if (kmChegada < ot.kmSaida) { showToast('Km de chegada não pode ser menor que km de saída'); return; }
+      const diff = Math.round((kmChegada - ot.kmSaida)*10)/10;
+      if (diff > 200) {
+        state.modal = { type: 'kmWarning', km: diff, tripId: ot.id, horaChegada, kmChegada, notas };
+        renderModal();
+        return;
+      }
+      await finalizeTripClose(ot.id, horaChegada, kmChegada, notas, false);
+      render();
+    };
+    document.getElementById('btnCancelarViagem').onclick = () => {
+      state.modal = { type: 'cancelTrip', tripId: ot.id };
+      renderModal();
+    };
+    return;
+  }
+
+  document.getElementById('btnIniciar').onclick = async () => {
+    const horaSaida = document.getElementById('horaSaida').value;
+    const origem = document.getElementById('origem').value.trim();
+    const destino = document.getElementById('destino').value.trim();
+    const finalidade = document.getElementById('finalidade').value.trim();
+    if (!horaSaida || !origem || !destino) { showToast('Preenche hora, origem e destino'); return; }
+    const trip = {
+      id: Date.now()+'-'+Math.random().toString(36).slice(2,7),
+      data: todayISO(), matricula: state.checkin.matricula,
+      kmSaida: state.checkin.kmAtual, horaSaida,
+      horaChegada: null, kmChegada: null, totalKm: null,
+      origem, destino, finalidade, notas: '', status: 'aberta', editHistory: []
+    };
+    state.trips.push(trip);
+    await saveTrips();
+    showToast('Viagem iniciada');
+    render();
+  };
+}
+
+async function finalizeTripClose(tripId, horaChegada, kmChegada, notas, wasWarned) {
+  const t = state.trips.find(x => x.id === tripId);
+  t.horaChegada = horaChegada;
+  t.kmChegada = kmChegada;
+  t.totalKm = Math.round((kmChegada - t.kmSaida)*10)/10;
+  t.notas = notas;
+  t.status = 'fechada';
+  await saveTrips();
+  state.checkin.kmAtual = kmChegada;
+  await saveCheckin();
+  await saveVehicleRecord(t.matricula, state.checkin.modelo, kmChegada);
+  showToast('Viagem terminada · ' + t.totalKm + ' km');
+}
+
+async function doCheckout() {
+  if (openTrip()) {
+    state.modal = { type: 'checkoutBlocked' };
+    renderModal();
+    return;
+  }
+  const shiftDate = state.checkin.data;
+  const dayTrips = state.trips.filter(t => t.data === shiftDate);
+  const dayFuel = state.fuel.filter(f => f.data === shiftDate);
+  const summary = {
+    matricula: state.checkin.matricula,
+    numViagens: dayTrips.length,
+    totalKm: dayTrips.filter(t=>t.totalKm!=null).reduce((s,t)=>s+t.totalKm,0),
+    numAbastecimentos: dayFuel.length,
+    totalLitros: dayFuel.reduce((s,f)=>s+parseFloat(f.litros||0),0).toFixed(1),
+    totalCusto: dayFuel.reduce((s,f)=>s+parseFloat(f.custo||0),0).toFixed(2),
+  };
+  state.modal = { type: 'checkoutSummary', data: shiftDate, trips: dayTrips, fuel: dayFuel, summary };
+  renderModal();
+}
+
+function attachFuelEvents() {
+  document.getElementById('btnFuel').onclick = async () => {
+    const data = document.getElementById('fuelData').value;
+    const litros = parseFloat(document.getElementById('fuelLitros').value);
+    const custo = parseFloat(document.getElementById('fuelCusto').value);
+    const local = document.getElementById('fuelLocal').value.trim();
+    if (!data || isNaN(litros) || isNaN(custo)) { showToast('Preenche data, litros e custo'); return; }
+    state.fuel.push({ id: Date.now()+'', data, matricula: state.checkin.matricula, litros, custo, local });
+    await saveFuel();
+    showToast('Abastecimento registado');
+    render();
+  };
+}
+
+// ---------- Excel export ----------
+function exportDayExcel(dateStr, trips, fuel) {
+  const totalKm = trips.filter(t=>t.totalKm!=null).reduce((s,t)=>s+t.totalKm,0);
+  const totalLitros = fuel.reduce((s,f)=>s+parseFloat(f.litros||0),0);
+  const totalCusto = fuel.reduce((s,f)=>s+parseFloat(f.custo||0),0);
+
+  const rows = [];
+  rows.push(['TURIM Hotels — Registo de Rota Diária']);
+  rows.push(['Funcionário', state.employee.nome, 'Nº', state.employee.numero]);
+  rows.push(['Data', dateStr]);
+  rows.push([]);
+  rows.push(['Resumo do dia']);
+  rows.push(['Nº viagens', trips.length]);
+  rows.push(['Km total percorrido', totalKm]);
+  rows.push(['Litros abastecidos', totalLitros.toFixed(2)]);
+  rows.push(['Custo combustível (€)', totalCusto.toFixed(2)]);
+  rows.push([]);
+  rows.push(['Viagens']);
+  rows.push(['Data','Matrícula','Hora Saída','Km Saída','Hora Chegada','Km Chegada','Total Km','Origem','Destino','Finalidade','Notas']);
+  trips.forEach(t => rows.push([t.data, t.matricula, t.horaSaida, t.kmSaida, t.horaChegada||'', t.kmChegada!=null?t.kmChegada:'', t.totalKm!=null?t.totalKm:'', t.origem, t.destino, t.finalidade, t.notas||'']));
+  rows.push([]);
+  rows.push(['Abastecimentos']);
+  rows.push(['Data','Matrícula','Litros','Custo (€)','Local']);
+  fuel.forEach(f => rows.push([f.data, f.matricula, f.litros, f.custo, f.local||'']));
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{wch:12},{wch:12},{wch:12},{wch:10},{wch:12},{wch:12},{wch:10},{wch:16},{wch:16},{wch:20},{wch:24}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Relatorio');
+  const filenameSafe = (state.employee.nome||'condutor').replace(/[^a-zA-Z0-9]+/g,'_');
+  XLSX.writeFile(wb, `Rota_${filenameSafe}_${dateStr}.xlsx`);
+}
+
+init();
+</script>
+</body>
+</html>
