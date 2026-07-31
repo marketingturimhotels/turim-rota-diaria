@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Registo de Rota Diária — TURIM</title>
+<title>TURIM Frota</title>
 
 <link rel="manifest" href="./manifest.json">
-<meta name="theme-color" content="#142440">
+<meta name="theme-color" content="#0A0A0A">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Rota TURIM">
+<meta name="apple-mobile-web-app-title" content="TURIM Frota">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <link rel="icon" href="./icon-192.png" type="image/png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -32,18 +32,20 @@
 </script>
 <style>
   :root {
-    --navy: #142440;
-    --navy-light: #1F3A63;
-    --amber: #E2A63B;
-    --amber-dark: #C68A24;
-    --bg: #F3F4F7;
-    --card: #FFFFFF;
-    --text: #1B1F27;
-    --muted: #6B7280;
-    --border: #E4E6EB;
-    --green: #2F7D5A;
-    --red: #C0392B;
-    --red-bg: #FDECEA;
+    --navy: #15140F;
+    --navy-light: #201F18;
+    --amber: #B0A06C;
+    --amber-dark: #8C7D4F;
+    --bg: #0A0A0A;
+    --card: #171613;
+    --text: #F3F1EA;
+    --muted: #9C9686;
+    --border: #2E2C27;
+    --green: #5FAE83;
+    --green-bg: rgba(95,174,131,0.15);
+    --red: #E2685C;
+    --red-bg: rgba(226,104,92,0.15);
+    --gold-bg: rgba(176,160,108,0.15);
     --radius: 14px;
     --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
     --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -52,42 +54,45 @@
   body { margin: 0; font-family: var(--sans); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
   #app { max-width: 480px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; padding-bottom: 84px; }
 
-  header.topbar { background: var(--navy); color: #fff; padding: 18px 20px 16px; display: flex; align-items: center; justify-content: space-between; }
+  header.topbar { background: var(--bg); color: var(--text); padding: 18px 20px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
   header.topbar .brand { display: flex; flex-direction: column; }
   header.topbar .brand .logo { font-size: 13px; letter-spacing: 4px; font-weight: 700; color: var(--amber); }
-  header.topbar .brand .title { font-size: 16px; font-weight: 600; margin-top: 2px; }
-  header.topbar .driver-chip { font-size: 12px; background: rgba(255,255,255,0.1); padding: 6px 10px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.18); cursor: pointer; white-space: nowrap; text-align: right; line-height: 1.3; }
+  header.topbar .brand .title { font-size: 16px; font-weight: 600; margin-top: 2px; color: var(--text); }
+  header.topbar .driver-chip { font-size: 12px; background: var(--gold-bg); padding: 6px 10px; border-radius: 20px; border: 1px solid rgba(176,160,108,0.3); cursor: pointer; white-space: nowrap; text-align: right; line-height: 1.3; color: var(--text); }
 
   main { flex: 1; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
 
-  .card { background: var(--card); border-radius: var(--radius); padding: 18px; border: 1px solid var(--border); box-shadow: 0 1px 2px rgba(20,36,64,0.04); }
+  .card { background: var(--card); border-radius: var(--radius); padding: 18px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
   .card h2 { margin: 0 0 4px; font-size: 15px; font-weight: 700; }
   .card .sub { color: var(--muted); font-size: 12.5px; margin: 0 0 14px; }
 
   label { display: block; font-size: 12.5px; color: var(--muted); margin: 10px 0 5px; font-weight: 600; }
   input[type=text], input[type=number], input[type=date], input[type=time], select, textarea {
     width: 100%; padding: 11px 12px; border-radius: 10px; border: 1.5px solid var(--border);
-    font-size: 15px; font-family: var(--sans); background: #fff; color: var(--text);
+    font-size: 15px; font-family: var(--sans); background: var(--navy-light); color: var(--text);
   }
-  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--navy-light); }
+  input::placeholder, textarea::placeholder { color: var(--muted); }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--amber); }
   textarea { resize: vertical; min-height: 56px; }
+  /* dark-theme date/time picker icon visibility */
+  input[type=date]::-webkit-calendar-picker-indicator, input[type=time]::-webkit-calendar-picker-indicator { filter: invert(0.85); }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
   button.btn { width: 100%; padding: 13px; border-radius: 10px; border: none; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 16px; }
-  button.btn.primary { background: var(--navy); color: #fff; }
-  button.btn.amber { background: var(--amber); color: var(--navy); }
+  button.btn.primary { background: var(--navy-light); color: var(--amber); border: 1.5px solid var(--amber); }
+  button.btn.amber { background: var(--amber); color: #14130E; }
   button.btn.danger { background: var(--red-bg); color: var(--red); }
-  button.btn.ghost { background: transparent; color: var(--navy); border: 1.5px solid var(--border); margin-top: 8px; }
+  button.btn.ghost { background: transparent; color: var(--amber); border: 1.5px solid var(--border); margin-top: 8px; }
   button.btn.small { width: auto; padding: 8px 14px; font-size: 13px; margin-top: 0; }
   button.btn:disabled { opacity: 0.45; cursor: not-allowed; }
-  .link-btn { background: none; border: none; color: var(--navy-light); font-size: 12.5px; font-weight: 600; cursor: pointer; padding: 0; text-decoration: underline; }
+  .link-btn { background: none; border: none; color: var(--amber); font-size: 12.5px; font-weight: 600; cursor: pointer; padding: 0; text-decoration: underline; }
   .link-btn.danger-text { color: var(--red); }
 
-  .km-display { background: var(--navy); color: #fff; border-radius: 10px; padding: 12px 14px; font-family: var(--mono); letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
+  .km-display { background: var(--navy-light); color: var(--text); border-radius: 10px; padding: 12px 14px; font-family: var(--mono); letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
   .km-display .num { font-size: 20px; font-weight: 700; color: var(--amber); }
-  .km-display .lbl { font-size: 11px; color: #C9D2E3; text-transform: uppercase; letter-spacing: 1.5px; }
+  .km-display .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; }
 
-  .vehicle-strip { background: #EEF1F6; border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; }
+  .vehicle-strip { background: var(--navy-light); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; }
   .vehicle-strip .info b { display: block; font-size: 14px; }
   .vehicle-strip .info span { font-size: 12px; color: var(--muted); }
 
@@ -98,39 +103,39 @@
   .trip-item .meta { font-size: 12px; color: var(--muted); margin-top: 3px; }
   .trip-item .actions { margin-top: 6px; display: flex; gap: 14px; }
   .badge { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; }
-  .badge.open { background: #FCEBD5; color: var(--amber-dark); }
-  .badge.closed { background: #E4F2EC; color: var(--green); }
-  .badge.edited { background: #E9ECF3; color: var(--navy-light); cursor: pointer; }
+  .badge.open { background: var(--gold-bg); color: var(--amber); }
+  .badge.closed { background: var(--green-bg); color: var(--green); }
+  .badge.edited { background: rgba(255,255,255,0.08); color: var(--muted); cursor: pointer; }
 
-  .month-group h3 { font-size: 13px; color: var(--navy); text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 6px; }
+  .month-group h3 { font-size: 13px; color: var(--amber); text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 6px; }
   .month-summary { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
 
-  nav.tabbar { position: fixed; bottom: 0; left: 0; right: 0; max-width: 480px; margin: 0 auto; background: #fff; border-top: 1px solid var(--border); display: flex; padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); }
+  nav.tabbar { position: fixed; bottom: 0; left: 0; right: 0; max-width: 480px; margin: 0 auto; background: var(--card); border-top: 1px solid var(--border); display: flex; padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); }
   nav.tabbar button { flex: 1; background: none; border: none; padding: 8px 2px; font-size: 11px; font-weight: 600; color: var(--muted); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; }
   nav.tabbar button .ico { font-size: 18px; }
-  nav.tabbar button.active { color: var(--navy); }
-  nav.tabbar button.active .ico { color: var(--amber-dark); }
+  nav.tabbar button.active { color: var(--amber); }
+  nav.tabbar button.active .ico { color: var(--amber); }
 
   .empty { text-align: center; color: var(--muted); font-size: 13px; padding: 24px 10px; }
 
-  .driver-select-screen { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; background: var(--navy); }
+  .driver-select-screen { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; background: var(--bg); }
   .driver-select-screen .logo { color: var(--amber); font-weight: 700; letter-spacing: 5px; font-size: 14px; margin-bottom: 4px; }
-  .driver-select-screen h1 { color: #fff; font-size: 20px; margin: 0 0 24px; text-align: center; font-weight: 600; }
+  .driver-select-screen h1 { color: var(--text); font-size: 20px; margin: 0 0 24px; text-align: center; font-weight: 600; }
   .driver-select-screen .card { width: 100%; max-width: 380px; }
   .driver-chip-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-  .driver-chip-list button { background: #F0F1F4; border: 1.5px solid var(--border); border-radius: 20px; padding: 7px 14px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--text); }
+  .driver-chip-list button { background: var(--navy-light); border: 1.5px solid var(--border); border-radius: 20px; padding: 7px 14px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--text); }
 
-  .toast { position: fixed; bottom: 96px; left: 50%; transform: translateX(-50%); background: var(--navy); color: #fff; padding: 10px 18px; border-radius: 30px; font-size: 13px; font-weight: 600; box-shadow: 0 4px 14px rgba(0,0,0,0.2); z-index: 50; opacity: 0; transition: opacity 0.25s; max-width: 90%; text-align: center; }
+  .toast { position: fixed; bottom: 96px; left: 50%; transform: translateX(-50%); background: var(--navy-light); color: var(--text); padding: 10px 18px; border-radius: 30px; font-size: 13px; font-weight: 600; box-shadow: 0 4px 14px rgba(0,0,0,0.5); z-index: 50; opacity: 0; transition: opacity 0.25s; max-width: 90%; text-align: center; border: 1px solid var(--border); }
   .toast.show { opacity: 1; }
 
   .fuel-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
   .fuel-item:last-child { border-bottom: none; }
 
-  .modal-overlay { position: fixed; inset: 0; background: rgba(10,15,26,0.55); display: flex; align-items: flex-end; justify-content: center; z-index: 100; }
-  .modal-sheet { background: #fff; width: 100%; max-width: 480px; border-radius: 18px 18px 0 0; padding: 22px 20px calc(20px + env(safe-area-inset-bottom)); max-height: 85vh; overflow-y: auto; }
-  .modal-sheet h3 { margin: 0 0 4px; font-size: 16px; }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: flex-end; justify-content: center; z-index: 100; }
+  .modal-sheet { background: var(--card); color: var(--text); width: 100%; max-width: 480px; border-radius: 18px 18px 0 0; padding: 22px 20px calc(20px + env(safe-area-inset-bottom)); max-height: 85vh; overflow-y: auto; border-top: 1px solid var(--border); }
+  .modal-sheet h3 { margin: 0 0 4px; font-size: 16px; color: var(--text); }
   .modal-sheet p { font-size: 13.5px; color: var(--muted); margin: 0 0 12px; }
-  .confirm-box { background: #F0F1F4; border-radius: 10px; padding: 12px 14px; font-size: 13.5px; margin-bottom: 4px; }
+  .confirm-box { background: var(--navy-light); border-radius: 10px; padding: 12px 14px; font-size: 13.5px; margin-bottom: 4px; }
   .confirm-box.warn { background: var(--red-bg); color: var(--red); font-weight: 600; }
   .confirm-box div { padding: 2px 0; }
   .modal-actions { display: flex; gap: 10px; margin-top: 16px; }
@@ -348,7 +353,7 @@ function renderStorageWarning(reason) {
   return `
     <div class="driver-select-screen">
       <div class="logo">TURIM HOTELS</div>
-      <h1>Registo de Rota Diária</h1>
+      <h1>TURIM Frota</h1>
       <div class="card">
         <h2 style="color:var(--red);">Gravação de dados indisponível</h2>
         <p class="sub">${escapeHtml(reason)}</p>
@@ -375,7 +380,7 @@ function renderEmployeeSelect() {
   return `
     <div class="driver-select-screen">
       <div class="logo">TURIM HOTELS</div>
-      <h1>Registo de Rota Diária</h1>
+      <h1>TURIM Frota</h1>
       <div class="card">
         <h2>Identificação</h2>
         <p class="sub">Introduz o teu nº de funcionário.</p>
@@ -403,7 +408,7 @@ function renderCreatePin() {
   return `
     <div class="driver-select-screen">
       <div class="logo">TURIM HOTELS</div>
-      <h1>Registo de Rota Diária</h1>
+      <h1>TURIM Frota</h1>
       <div class="card">
         <h2>Criar PIN</h2>
         <p class="sub">É a primeira vez que entras com o nº ${escapeHtml(state.authNumero)}. Escreve o teu nome e cria um PIN de 4 dígitos.</p>
@@ -443,7 +448,7 @@ function renderEnterPin() {
   return `
     <div class="driver-select-screen">
       <div class="logo">TURIM HOTELS</div>
-      <h1>Registo de Rota Diária</h1>
+      <h1>TURIM Frota</h1>
       <div class="card">
         <h2>Olá, ${escapeHtml(state.authRecord.nome)}</h2>
         <p class="sub">Introduz o teu PIN para entrar.</p>
@@ -481,7 +486,7 @@ function renderMain() {
     <header class="topbar">
       <div class="brand">
         <div class="logo">TURIM</div>
-        <div class="title">Rota Diária</div>
+        <div class="title">Frota</div>
       </div>
       <div class="driver-chip" id="chipDriver">${escapeHtml(state.employee.nome)}<br>nº ${escapeHtml(state.employee.numero)} · trocar</div>
     </header>
@@ -1029,7 +1034,7 @@ function exportDayExcel(dateStr, trips, fuel) {
   const totalCusto = fuel.reduce((s,f)=>s+parseFloat(f.custo||0),0);
 
   const rows = [];
-  rows.push(['TURIM Hotels — Registo de Rota Diária']);
+  rows.push(['TURIM Frota — Relatório Diário']);
   rows.push(['Funcionário', state.employee.nome, 'Nº', state.employee.numero]);
   rows.push(['Data', dateStr]);
   rows.push([]);
@@ -1052,7 +1057,7 @@ function exportDayExcel(dateStr, trips, fuel) {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Relatorio');
   const filenameSafe = (state.employee.nome||'condutor').replace(/[^a-zA-Z0-9]+/g,'_');
-  XLSX.writeFile(wb, `Rota_${filenameSafe}_${dateStr}.xlsx`);
+  XLSX.writeFile(wb, `Frota_${filenameSafe}_${dateStr}.xlsx`);
 }
 
 if ('serviceWorker' in navigator) {

@@ -1,11 +1,11 @@
 {
-  "name": "Registo de Rota Diária — TURIM",
-  "short_name": "Rota TURIM",
+  "name": "TURIM Frota",
+  "short_name": "TURIM Frota",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#142440",
-  "theme_color": "#142440",
+  "background_color": "#0A0A0A",
+  "theme_color": "#0A0A0A",
   "orientation": "portrait",
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
